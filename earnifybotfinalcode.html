@@ -1,0 +1,242 @@
+<!doctype html>
+<html>
+<head>
+  <meta charset="utf-8">
+  <title>EarnifyBot – Watch Ads, Earn Money</title>
+  <meta name="viewport" content="width=device-width, initial-scale=1">
+
+  <style>
+    body {
+      margin: 0;
+      font-family: "Poppins", sans-serif;
+      background: #0d0d0d;
+      color: #f4f4f4;
+      display: flex;
+      justify-content: center;
+      align-items: center;
+      height: 100vh;
+    }
+    .card {
+      background: #121212;
+      border: 1px solid #1f1f1f;
+      border-radius: 20px;
+      box-shadow: 0px 0px 25px rgba(0,255,200,0.15);
+      padding: 30px;
+      width: 360px;
+      text-align: center;
+      animation: fadeIn 0.8s ease;
+    }
+    h2 {
+      color: #00ffd5;
+    }
+    input, select {
+      width: 90%;
+      padding: 10px;
+      margin: 8px 0;
+      border-radius: 10px;
+      border: none;
+      outline: none;
+      font-size: 14px;
+    }
+    button {
+      width: 95%;
+      padding: 12px;
+      margin: 10px 0;
+      border: none;
+      border-radius: 12px;
+      font-size: 16px;
+      cursor: pointer;
+      transition: all 0.3s;
+      background: linear-gradient(90deg,#00ffd5,#0077ff);
+      color: #fff;
+    }
+    button:hover {
+      opacity: 0.85;
+    }
+    .hidden { display: none; }
+    .status { margin: 15px 0; color: #aaa; }
+    .balance {
+      font-size: 22px;
+      margin: 20px 0;
+      color: #00ffd5;
+      font-weight: bold;
+    }
+    @keyframes fadeIn {
+      from {opacity:0; transform: translateY(10px);}
+      to {opacity:1; transform: translateY(0);}
+    }
+  </style>
+</head>
+<body>
+
+<div id="loginPage" class="card">
+  <h2>?? Login</h2>
+  <input type="email" id="loginEmail" placeholder="Email">
+  <input type="password" id="loginPass" placeholder="Password">
+  <button onclick="login()">Login</button>
+  <p class="status" id="loginStatus"></p>
+  <p>Don't have an account?</p>
+  <button onclick="showSignup()">Sign Up</button>
+</div>
+
+<div id="signupPage" class="card hidden">
+  <h2>?? Sign Up</h2>
+  <input type="email" id="signupEmail" placeholder="Email">
+  <input type="password" id="signupPass" placeholder="Password">
+  <button onclick="signup()">Register</button>
+  <p class="status" id="signupStatus"></p>
+  <button onclick="showLogin()">Back to Login</button>
+</div>
+
+<div id="dashboardPage" class="card hidden">
+  <h2>?? EarnifyBot</h2>
+  <div class="balance">Balance: <span id="bal">0</span> TK</div>
+  <button onclick="watchInterstitial()">? Watch Ad (Reward)</button>
+  <button onclick="watchPopup()">? Popup Ad</button>
+  <p class="status" id="status"></p>
+
+  <h3>?? Withdraw</h3>
+  <select id="method">
+    <option value="bkash">bKash</option>
+    <option value="nagad">Nagad</option>
+  </select>
+  <input type="number" id="withdrawAmount" placeholder="Amount (300-500)">
+  <button onclick="withdraw()">Request Withdraw</button>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<div id="adminPage" class="card hidden">
+  <h2>? Admin Panel</h2>
+  <p>Pending Withdrawals:</p>
+  <div id="withdrawRequests"></div>
+  <button onclick="logout()">Logout</button>
+</div>
+
+<!-- ? Monetag SDK -->
+<script src='//libtl.com/sdk.js' data-zone='9962737' data-sdk='show_9962737'></script>
+
+<script>
+  // Load stored users and withdrawals
+  let users = JSON.parse(localStorage.getItem("users") || "{}");
+  let withdraws = JSON.parse(localStorage.getItem("withdraws") || "[]");
+  let currentUser = null;
+  let balance = 0;
+
+  function saveData(){
+    localStorage.setItem("users", JSON.stringify(users));
+    localStorage.setItem("withdraws", JSON.stringify(withdraws));
+  }
+
+  function showSignup(){
+    document.getElementById("loginPage").classList.add("hidden");
+    document.getElementById("signupPage").classList.remove("hidden");
+  }
+
+  function showLogin(){
+    document.getElementById("signupPage").classList.add("hidden");
+    document.getElementById("loginPage").classList.remove("hidden");
+  }
+
+  function login(){
+    let email = document.getElementById("loginEmail").value;
+    let pass = document.getElementById("loginPass").value;
+
+    if(email==="nixus390@gmail.com" && pass==="Hamid_017"){
+      currentUser = "admin";
+      document.getElementById("loginPage").classList.add("hidden");
+      document.getElementById("adminPage").classList.remove("hidden");
+      loadAdmin();
+      return;
+    }
+
+    if(users[email] && users[email].pass === pass){
+      currentUser = email;
+      balance = users[email].balance;
+      document.getElementById("bal").innerText = balance;
+      document.getElementById("loginPage").classList.add("hidden");
+      document.getElementById("dashboardPage").classList.remove("hidden");
+    } else {
+      document.getElementById("loginStatus").innerText = "? Invalid login!";
+    }
+  }
+
+  function signup(){
+    let email = document.getElementById("signupEmail").value;
+    let pass = document.getElementById("signupPass").value;
+
+    let storedUsers = JSON.parse(localStorage.getItem("users") || "{}");
+    if(storedUsers[email]){
+      document.getElementById("signupStatus").innerText = "?? User already exists!";
+      return;
+    }
+
+    storedUsers[email] = {pass: pass, balance: 0};
+    localStorage.setItem("users", JSON.stringify(storedUsers));
+    users = storedUsers;
+
+    document.getElementById("signupStatus").innerText = "? Registered! Please login.";
+  }
+
+  function logout(){
+    currentUser = null;
+    document.querySelectorAll(".card").forEach(c=>c.classList.add("hidden"));
+    document.getElementById("loginPage").classList.remove("hidden");
+  }
+
+  function rewardUser(amount){
+    balance += amount;
+    users[currentUser].balance = balance;
+    document.getElementById("bal").innerText = balance;
+    document.getElementById("status").innerText = `+${amount} TK added! ??`;
+    saveData();
+  }
+
+  // Monetag Ads
+  function watchInterstitial(){
+    document.getElementById("status").innerText = "Loading ad...";
+    show_9962737().then(()=>{ rewardUser(1); });
+  }
+  function watchPopup(){
+    document.getElementById("status").innerText = "Loading popup ad...";
+    show_9962737('pop').then(()=>{ rewardUser(1); });
+  }
+
+  function withdraw(){
+    let amt = parseInt(document.getElementById("withdrawAmount").value);
+    let method = document.getElementById("method").value;
+    if(amt < 300 || amt > 500){
+      alert("? Withdraw must be between 300–500 TK");
+      return;
+    }
+    if(balance < amt){
+      alert("? Insufficient balance");
+      return;
+    }
+    withdraws.push({user: currentUser, amount: amt, method, status:"pending"});
+    balance -= amt;
+    users[currentUser].balance = balance;
+    document.getElementById("bal").innerText = balance;
+    saveData();
+    alert("? Withdrawal requested!");
+  }
+
+  function loadAdmin(){
+    let box = document.getElementById("withdrawRequests");
+    box.innerHTML = "";
+    withdraws.forEach((req,i)=>{
+      let div = document.createElement("div");
+      div.innerHTML = `${req.user} ? ${req.amount} TK (${req.method}) [${req.status}] 
+        <button onclick="approve(${i})">?</button> 
+        <button onclick="reject(${i})">?</button>`;
+      box.appendChild(div);
+    });
+  }
+  function approve(i){
+    withdraws[i].status="approved"; saveData(); loadAdmin();
+  }
+  function reject(i){
+    withdraws[i].status="rejected"; saveData(); loadAdmin();
+  }
+</script>
+</body>
+</html>
